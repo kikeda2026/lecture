@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>感覚記憶実験デモ（Sperling, 1960）</title>
+  
+  <!-- 元サイトと同一のフォント読み込み -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* 元サイトのデザイントークンをそのまま適用 */
+    :root {
+      --paper: #F7F5EF;
+      --paper-raised: #FFFFFF;
+      --ink: #1E2A38;
+      --ink-soft: #5B6470;
+      --ink-faint: #8B9199;
+      --rule: #DCD6C6;
+      --rule-strong: #C8C0AC;
+      --teal: #2F6F6B;
+      --teal-dark: #1F4B48;
+      --teal-bg: #E4EFED;
+      --ochre: #B8843C;
+      --ochre-bg: #F5E9D6;
+      --rose: #9C5148;
+      --rose-bg: #F3E4E1;
+      --focus: #2F6F6B;
+      --radius: 10px;
+      --shadow-card: 0 1px 2px rgba(30,42,56,0.06), 0 1px 1px rgba(30,42,56,0.04);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    /* 元サイトと完全一致のドット背景 & タイポグラフィ */
+    body {
+      background: var(--paper);
+      background-image: radial-gradient(var(--rule) 0.6px, transparent 0.6px);
+      background-size: 22px 22px;
+      background-position: -11px -11px;
+      color: var(--ink);
+      font-family: "Noto Sans JP", "Hiragino Sans", sans-serif;
+      line-height: 1.75;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px 16px;
+    }
+
+    .container {
+      background: var(--paper-raised);
+      width: 100%;
+      max-width: 600px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-card);
+      border: 1px solid var(--rule);
+      padding: 28px 24px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.35rem;
+      margin-bottom: 14px;
+      color: var(--ink);
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    p {
+      font-size: 0.95rem;
+      line-height: 1.75;
+      color: var(--ink-soft);
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    /* 案内ボックス（ティール基調） */
+    .notice-box {
+      background-color: var(--teal-bg);
+      border-left: 4px solid var(--teal);
+      padding: 14px;
+      margin-bottom: 20px;
+      font-size: 0.88rem;
+      color: var(--teal-dark);
+      text-align: left;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      line-height: 1.65;
+    }
+
+    .notice-box ul {
+      margin-left: 20px;
+      margin-top: 6px;
+    }
+
+    /* 刺激選択コントロール */
+    .setting-group {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .setting-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .radio-options {
+      display: flex;
+      gap: 18px;
+    }
+
+    .radio-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.92rem;
+      cursor: pointer;
+      color: var(--ink);
+      user-select: none;
+    }
+
+    .radio-label input[type="radio"] {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--teal);
+      cursor: pointer;
+    }
+
+    /* ボタンスタイル（ティール基調） */
+    .btn {
+      display: inline-block;
+      width: 100%;
+      background-color: var(--teal);
+      color: #ffffff;
+      border: none;
+      padding: 13px 20px;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: inherit;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background-color 0.18s ease, transform 0.05s ease;
+      touch-action: manipulation;
+    }
+
+    .btn:hover {
+      background-color: var(--teal-dark);
+    }
+
+    .btn:active {
+      transform: scale(0.99);
+    }
+
+    .btn:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    /* 実験ステージ */
+    #exp-stage {
+      position: relative;
+      width: 100%;
+      height: 240px;
+      background: var(--paper);
+      border: 2px dashed var(--rule-strong);
+      border-radius: var(--radius);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+      user-select: none;
+      overflow: hidden;
+    }
+
+    #fixation {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--ink);
+      display: none;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    #grid-display {
+      display: grid;
+      grid-template-rows: repeat(3, 1fr);
+      row-gap: 20px;
+      width: 200px;
+    }
+
+    .grid-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: relative;
+      padding: 2px 4px;
+      min-height: 48px;
+    }
+
+    .grid-letter {
+      font-size: 2.1rem;
+      font-weight: 700;
+      font-family: "JetBrains Mono", "Noto Sans JP", monospace;
+      width: 46px;
+      text-align: center;
+      color: var(--ink);
+    }
+
+    /* 視覚キュー（ローズレッド） */
+    .cue-arrow {
+      position: absolute;
+      font-size: 2rem;
+      color: var(--rose);
+      font-weight: 900;
+      display: none;
+      line-height: 1;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .cue-left { left: -36px; }
+    .cue-right { right: -36px; }
+
+    #response-area {
+      min-height: 130px;
+      transition: opacity 0.15s ease;
+    }
+
+    #response-area.response-hidden {
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
+
+    .input-section {
+      margin-top: 10px;
+      margin-bottom: 18px;
+    }
+
+    #instruction-text {
+      font-weight: 700;
+      text-align: center;
+      color: var(--ink);
+      margin-bottom: 12px;
+      font-size: 0.95rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      font-size: 1.2rem;
+      letter-spacing: 5px;
+      text-align: center;
+      font-weight: 700;
+      font-family: inherit;
+      color: var(--ink);
+      background: var(--paper-raised);
+      border: 2px solid var(--rule-strong);
+      border-radius: var(--radius);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--teal);
+      box-shadow: 0 0 0 3px rgba(47, 111, 107, 0.2);
+    }
+
+    /* テーブルデザイン */
+    .result-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 0.92rem;
+    }
+
+    .result-table th, .result-table td {
+      border: 1px solid var(--rule);
+      padding: 10px 8px;
+      text-align: center;
+    }
+
+    .result-table th {
+      background: var(--paper);
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .highlight-val {
+      font-weight: 700;
+      color: var(--teal);
+    }
+
+    /* 結果解説ボックス（ティール背景） */
+    .feedback-box {
+      border-left: 4px solid var(--teal);
+      background-color: var(--teal-bg);
+      padding: 16px;
+      margin: 20px 0;
+      text-align: left;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      color: var(--teal-dark);
+    }
+
+    .feedback-box h3 {
+      font-size: 0.98rem;
+      color: var(--teal-dark);
+      margin-bottom: 8px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* バッジ（練習・本番の区別） */
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .badge-practice {
+      background: var(--ochre-bg);
+      color: var(--ochre);
+    }
+
+    .badge-main {
+      background: var(--teal-bg);
+      color: var(--teal-dark);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 1. ガイダンス画面 -->
+  <div id="screen-intro">
+    <h1>感覚記憶実験デモ<br><small style="font-size: 0.9rem; color: var(--ink-soft); font-weight: normal;">（Sperling, 1960 部分報告遅延実験）</small></h1>
+    <p>
+      この実験では、一瞬（0.15秒間）だけ画面に表示される9文字（3行×3列）のうち、文字が消えた後に<strong>赤矢印（▶ ◀）で指定された1行（3文字）</strong>を記憶して回答します。
+    </p>
+
+    <div class="notice-box">
+      <strong>【実験の流れ】（所要時間：約1.5〜2分）</strong>
+      <ul>
+        <li><strong>練習：2試行</strong>（まずは操作とタイミングに慣れてください）</li>
+        <li><strong>本番：6試行</strong>（文字が消えてから矢印が出るまでの遅延時間［100ms, 300ms, 700ms］が変化します）</li>
+      </ul>
+    </div>
+
+    <!-- 刺激言語の選択（基本：アルファベット） -->
+    <div class="setting-group">
+      <span class="setting-label">呈示する文字の種類：</span>
+      <div class="radio-options">
+        <label class="radio-label">
+          <input type="radio" name="stimulus-type" value="alphabet" checked>
+          <span>アルファベット（基本）</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="stimulus-type" value="hiragana">
+          <span>ひらがな</span>
+        </label>
+      </div>
+    </div>
+
+    <p style="font-size: 0.85rem; color: var(--ink-faint); text-align: center; margin-bottom: 20px;">
+      ※ 画面中央の「+」印をしっかり注視して臨んでください。
+    </p>
+    <button class="btn" id="btn-start">練習を開始する</button>
+  </div>
+
+  <!-- 2. 実験実施画面 -->
+  <div id="screen-trial" class="hidden">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <span id="trial-counter" style="font-size: 0.88rem; color: var(--ink-soft); font-weight: 500;">練習 1 / 2</span>
+      <span id="condition-label" class="badge badge-practice">練習試行</span>
+    </div>
+
+    <!-- 刺激提示ステージ -->
+    <div id="exp-stage">
+      <div id="fixation">+</div>
+      <div id="grid-display" class="hidden">
+        <!-- 3行×3文字のグリッド -->
+        <div class="grid-row" id="row-0">
+          <span class="cue-arrow cue-left">▶</span>
+          <span class="grid-letter"></span><span class="grid-letter"></span><span class="grid-letter"></span>
+          <span class="cue-arrow cue-right">◀</span>
+        </div>
+        <div class="grid-row" id="row-1">
+          <span class="cue-arrow cue-left">▶</span>
+          <span class="grid-letter"></span><span class="grid-letter"></span><span class="grid-letter"></span>
+          <span class="cue-arrow cue-right">◀</span>
+        </div>
+        <div class="grid-row" id="row-2">
+          <span class="cue-arrow cue-left">▶</span>
+          <span class="grid-letter"></span><span class="grid-letter"></span><span class="grid-letter"></span>
+          <span class="cue-arrow cue-right">◀</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 回答入力エリア -->
+    <div id="response-area" class="response-hidden">
+      <div class="input-section">
+        <div id="instruction-text"></div>
+        <input 
+          type="text" 
+          id="answer-input" 
+          autocomplete="off" 
+          autocorrect="off" 
+          spellcheck="false" 
+          placeholder="ひらがなで入力"
+        >
+      </div>
+      <button class="btn" id="btn-submit">回答を確定して次へ</button>
+    </div>
+  </div>
+
+  <!-- 3. 結果フィードバック画面 -->
+  <div id="screen-result" class="hidden">
+    <h1>実験終了</h1>
+    <p style="text-align: center;">すべての試行が完了しました。ご協力ありがとうございました。</p>
+    
+    <table class="result-table">
+      <thead>
+        <tr>
+          <th>遅延時間</th>
+          <th>平均正答数</th>
+          <th>推定保持文字数</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>100 ms（直後）</td>
+          <td id="res-100-corr">-</td>
+          <td id="res-100-est" class="highlight-val">-</td>
+        </tr>
+        <tr>
+          <td>300 ms（中間）</td>
+          <td id="res-300-corr">-</td>
+          <td id="res-300-est" class="highlight-val">-</td>
+        </tr>
+        <tr>
+          <td>700 ms（長遅延）</td>
+          <td id="res-700-corr">-</td>
+          <td id="res-700-est" class="highlight-val">-</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 学術解説ボックス -->
+    <div id="dynamic-feedback" class="feedback-box">
+      <!-- JavaScriptで生成 -->
+    </div>
+
+    <div style="margin-top: 24px;">
+      <button class="btn" id="btn-restart" style="background-color: var(--ink-soft);">もう一度体験する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 視覚的混同を避けるため子音中心（アルファベット）
+  const LETTERS_ALPHABET = "BCDFGHJKLMNPQRSTVWXYZ";
+  // 清音（ひらがな）
+  const LETTERS_HIRAGANA = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわ";
+
+  let selectedStimulusType = "alphabet"; // デフォルト: アルファベット
+
+  // 練習2試行 ＋ 本番6試行（100ms, 300ms, 700ms 各2試行）
+  const PRACTICE_TRIALS = [
+    { isPractice: true, delay: 100, targetRow: 0 },
+    { isPractice: true, delay: 100, targetRow: 2 }
+  ];
+
+  let MAIN_TRIALS = [
+    { isPractice: false, delay: 100, targetRow: 0 },
+    { isPractice: false, delay: 100, targetRow: 1 },
+    { isPractice: false, delay: 300, targetRow: 1 },
+    { isPractice: false, delay: 300, targetRow: 2 },
+    { isPractice: false, delay: 700, targetRow: 0 },
+    { isPractice: false, delay: 700, targetRow: 2 }
+  ];
+
+  let ALL_TRIALS = [];
+  let currentTrialIdx = 0;
+  let currentGrid = [];
+  let responseStartTime = 0;
+  let trialLogs = [];
+
+  const screenIntro = document.getElementById("screen-intro");
+  const screenTrial = document.getElementById("screen-trial");
+  const screenResult = document.getElementById("screen-result");
+  const fixation = document.getElementById("fixation");
+  const gridDisplay = document.getElementById("grid-display");
+  const responseArea = document.getElementById("response-area");
+  const answerInput = document.getElementById("answer-input");
+  const instructionText = document.getElementById("instruction-text");
+  const conditionLabel = document.getElementById("condition-label");
+  const trialCounter = document.getElementById("trial-counter");
+  const btnStart = document.getElementById("btn-start");
+  const btnSubmit = document.getElementById("btn-submit");
+  const btnRestart = document.getElementById("btn-restart");
+
+  // 9文字（3×3）を重複なしで生成
+  function generateGridLetters() {
+    const source = selectedStimulusType === "alphabet" ? LETTERS_ALPHABET : LETTERS_HIRAGANA;
+    const pool = source.split("");
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return [
+      pool.slice(0, 3),
+      pool.slice(3, 6),
+      pool.slice(6, 9)
+    ];
+  }
+
+  function initExperiment() {
+    const checkedRadio = document.querySelector('input[name="stimulus-type"]:checked');
+    selectedStimulusType = checkedRadio ? checkedRadio.value : "alphabet";
+
+    if (selectedStimulusType === "alphabet") {
+      answerInput.placeholder = "英大文字で入力";
+      answerInput.setAttribute("autocapitalize", "characters");
+      answerInput.style.textTransform = "uppercase";
+    } else {
+      answerInput.placeholder = "ひらがなで入力";
+      answerInput.removeAttribute("autocapitalize");
+      answerInput.style.textTransform = "none";
+    }
+
+    // 本番試行順のシャッフル
+    const shuffledMain = [...MAIN_TRIALS];
+    for (let i = shuffledMain.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffledMain[i], shuffledMain[j]] = [shuffledMain[j], shuffledMain[i]];
+    }
+
+    ALL_TRIALS = [...PRACTICE_TRIALS, ...shuffledMain];
+    currentTrialIdx = 0;
+    trialLogs = [];
+  }
+
+  if (btnStart) {
+    btnStart.addEventListener("click", () => {
+      initExperiment();
+      screenIntro.classList.add("hidden");
+      screenTrial.classList.remove("hidden");
+      runTrial();
+    });
+  }
+
+  if (btnRestart) {
+    btnRestart.addEventListener("click", () => {
+      screenResult.classList.add("hidden");
+      screenIntro.classList.remove("hidden");
+    });
+  }
+
+  function runTrial() {
+    if (currentTrialIdx >= ALL_TRIALS.length) {
+      finishExperiment();
+      return;
+    }
+
+    const t = ALL_TRIALS[currentTrialIdx];
+
+    if (t.isPractice) {
+      trialCounter.textContent = `練習 ${currentTrialIdx + 1} / ${PRACTICE_TRIALS.length}`;
+      conditionLabel.textContent = "練習試行";
+      conditionLabel.className = "badge badge-practice";
+    } else {
+      const mainIdx = currentTrialIdx - PRACTICE_TRIALS.length + 1;
+      trialCounter.textContent = `本番 ${mainIdx} / ${MAIN_TRIALS.length}`;
+      conditionLabel.textContent = "本番試行";
+      conditionLabel.className = "badge badge-main";
+    }
+
+    // 画面初期化
+    responseArea.classList.add("response-hidden");
+    answerInput.value = "";
+    document.querySelectorAll(".cue-arrow").forEach(el => el.style.display = "none");
+    document.querySelectorAll(".grid-letter").forEach(el => el.textContent = "");
+
+    // 1. 注視点（+）呈示（1000ms）
+    fixation.style.display = "block";
+    gridDisplay.classList.add("hidden");
+
+    setTimeout(() => {
+      fixation.style.display = "none";
+
+      // 文字配置
+      currentGrid = generateGridLetters();
+      const letterEls = document.querySelectorAll(".grid-letter");
+      let idx = 0;
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          letterEls[idx].textContent = currentGrid[r][c];
+          idx++;
+        }
+      }
+
+      // 2. 文字グリッド呈示（150ms）
+      gridDisplay.classList.remove("hidden");
+
+      setTimeout(() => {
+        // 文字消去
+        document.querySelectorAll(".grid-letter").forEach(el => el.textContent = "");
+
+        // 3. 遅延時間待機後に矢印キュー呈示
+        setTimeout(() => {
+          const targetRowEl = document.getElementById(`row-${t.targetRow}`);
+          if (targetRowEl) {
+            targetRowEl.querySelectorAll(".cue-arrow").forEach(el => el.style.display = "block");
+          }
+
+          // 4. 回答入力フォーム表示
+          setTimeout(() => {
+            responseArea.classList.remove("response-hidden");
+            const rowNames = ["上段", "中段", "下段"];
+            const kindText = selectedStimulusType === "alphabet" ? "アルファベット" : "ひらがな";
+            instructionText.textContent = `赤矢印で指定された【${rowNames[t.targetRow]}（3文字）】を${kindText}で入力してください`;
+            answerInput.focus();
+            responseStartTime = performance.now();
+          }, 100);
+
+        }, t.delay);
+
+      }, 150);
+    }, 1000);
+  }
+
+  if (btnSubmit) {
+    btnSubmit.addEventListener("click", submitAnswer);
+  }
+
+  if (answerInput) {
+    let isComposing = false;
+    answerInput.addEventListener("compositionstart", () => { isComposing = true; });
+    answerInput.addEventListener("compositionend", () => {
+      setTimeout(() => { isComposing = false; }, 50);
+    });
+
+    answerInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.isComposing && !isComposing && e.keyCode !== 229) {
+        submitAnswer();
+      }
+    });
+  }
+
+  function submitAnswer() {
+    const rt = Math.round(performance.now() - responseStartTime);
+    const rawAnswer = answerInput.value.trim();
+    const t = ALL_TRIALS[currentTrialIdx];
+    const targetString = currentGrid[t.targetRow].join("");
+    let correctCount = 0;
+
+    if (selectedStimulusType === "alphabet") {
+      const upperAns = rawAnswer.toUpperCase();
+      const matched = upperAns.match(/[A-Z]/g) || [];
+      const userChars = Array.from(new Set(matched));
+      correctCount = userChars.filter(c => targetString.includes(c)).length;
+    } else {
+      const hiraAnswer = rawAnswer.replace(/[\u30a1-\u30f6]/g, m => String.fromCharCode(m.charCodeAt(0) - 0x60));
+      const matched = hiraAnswer.match(/[\u3041-\u3096ー]/g) || [];
+      const userChars = Array.from(new Set(matched));
+      correctCount = userChars.filter(c => targetString.includes(c)).length;
+    }
+
+    trialLogs.push({
+      trial_no: currentTrialIdx + 1,
+      is_practice: t.isPractice,
+      delay_ms: t.delay,
+      target_row: t.targetRow + 1,
+      correct_count: correctCount,
+      reaction_time_ms: rt
+    });
+
+    currentTrialIdx++;
+    runTrial();
+  }
+
+  function finishExperiment() {
+    screenTrial.classList.add("hidden");
+    screenResult.classList.remove("hidden");
+
+    const mainLogs = trialLogs.filter(d => !d.is_practice);
+
+    function calcEst(delay) {
+      const logs = mainLogs.filter(d => d.delay_ms === delay);
+      if (logs.length === 0) return { avg: "0.0", est: "0.0" };
+      const avg = logs.reduce((sum, d) => sum + d.correct_count, 0) / logs.length;
+      return { avg: avg.toFixed(1), est: (avg * 3).toFixed(1) };
+    }
+
+    const res100 = calcEst(100);
+    const res300 = calcEst(300);
+    const res700 = calcEst(700);
+
+    document.getElementById("res-100-corr").textContent = `${res100.avg} 文字 / 3`;
+    document.getElementById("res-100-est").textContent = `${res100.est} 文字`;
+    document.getElementById("res-300-corr").textContent = `${res300.avg} 文字 / 3`;
+    document.getElementById("res-300-est").textContent = `${res300.est} 文字`;
+    document.getElementById("res-700-corr").textContent = `${res700.avg} 文字 / 3`;
+    document.getElementById("res-700-est").textContent = `${res700.est} 文字`;
+
+    renderStaticFeedback();
+  }
+
+  function renderStaticFeedback() {
+    const feedbackBox = document.getElementById("dynamic-feedback");
+    feedbackBox.innerHTML = `
+      <h3>【Sperling (1960) の遅延実験の知見】</h3>
+      <p style="margin-bottom: 10px; color: var(--teal-dark);">
+        スパーリングの古典的研究では、刺激消失からキュー（矢印）提示までの遅延時間（ISI）を変化させると、<strong>遅延が短時間（100〜150ms程度）では全体の75%以上（大容量）を保持</strong>しているのに対し、<strong>遅延が長くなる（500〜1000ms程度）と保持量は急激に減衰する</strong>ことが示されました。この極めて短時間だけ莫大な視覚情報をとどめる仕組みを「感覚記憶（アイコニックメモリ）」と呼びます。
+      </p>
+      <hr style="border: none; border-top: 1px solid var(--rule); margin: 12px 0;">
+      <p style="font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 0;">
+        ※ 本プログラムは教育・デモ用の簡易実験（各条件2試行）です。試行数が少ないため、個人のデータには偶然の変動や入力操作の影響が含まれます。
+      </p>
+    `;
+  }
+</script>
+</body>
+</html>
