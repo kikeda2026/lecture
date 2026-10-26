@@ -17,7 +17,25 @@ const FREQUENCY=[
 ];
 const PARTS=[{key:'NER',name:'第1部：否定的感情の調整',text:'つらい経験を否定的な形のまま他者に語る目的について回答してください。',desc:'つらい経験を他者に話して，共感や理解を得ようとする傾向',ref:2.61},{key:'PEE',name:'第2部：肯定的感情の拡張',text:'楽しい経験を肯定的な形のまま他者に語る目的について回答してください。',desc:'楽しい経験を他者と共有し，喜びを広げようとする傾向',ref:3.66},{key:'CgC',name:'第3部：認知的転換',text:'つらい経験を肯定的な形に変えて他者に語る目的について回答してください。',desc:'つらい経験を新たな視点から捉え直そうとする傾向',ref:2.61}];
 const $=s=>document.getElementById(s);let part=0,answers={},demographics=null,rid=null,payload=null,saveBusy=false,confirmed=false;
-function show(id){['welcome','survey','result'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+// 画面を切り替えたあと，埋め込みHTML内部のスクロールを先頭へ戻す。
+// 2回のrequestAnimationFrameで，質問・結果の描画完了後にも位置を補正する。
+function resetScrollToTop(){
+  const move=()=>{
+    window.scrollTo({top:0,left:0,behavior:'auto'});
+    document.documentElement.scrollTop=0;
+    document.body.scrollTop=0;
+  };
+  move();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    move();
+    const top=document.querySelector('header');
+    if(top) top.scrollIntoView({block:'start',behavior:'auto'});
+  }));
+}
+function show(id){
+  ['welcome','survey','result'].forEach(x=>$(x).classList.toggle('hidden',x!==id));
+  resetScrollToTop();
+}
 function makeQuestion(root,it,i){const wrap=document.createElement('div');wrap.className='question';const title=document.createElement('strong');title.textContent=`${i+1}. ${it.text}`;wrap.append(title);const scale=document.createElement('div');scale.className='scale';for(let v=1;v<=5;v++){const lab=document.createElement('label'),inp=document.createElement('input');inp.type='radio';inp.name=it.id;inp.value=v;inp.checked=answers[it.id]===v;inp.setAttribute('aria-label',`${it.id}：${v}点`);inp.addEventListener('change',()=>{answers[it.id]=v;$('validation').textContent=''});lab.append(inp,document.createTextNode(String(v)));scale.append(lab)}wrap.append(scale);const note=document.createElement('div');note.className='endpoints';note.innerHTML='<span>1：ほとんどしない</span><span>5：非常に頻繁にする</span>';wrap.append(note);root.append(wrap)}
 function render(){const p=PARTS[part],f=FREQUENCY[part];show('survey');$('steptext').textContent=`${part+1} / 3 ・ 合計23項目`;$('progress').style.width=100*part/3+'%';$('groupname').textContent=p.name;$('description').textContent='以下の質問について，ふだんの傾向に最も近い数字を選んでください。';const root=$('questions');root.replaceChildren();const fTitle=document.createElement('h3');fTitle.className='subheading';fTitle.textContent='語り直す頻度';root.append(fTitle);const intro=document.createElement('p');intro.className='muted';intro.textContent=f.intro;root.append(intro);makeQuestion(root,f,0);const heading=document.createElement('h3');heading.className='subheading';heading.textContent='語り直す目的';root.append(heading);const desc=document.createElement('p');desc.className='muted';desc.textContent=DIRECTIONS[p.key];root.append(desc);ITEMS.filter(i=>i.factor===p.key).forEach((it,i)=>makeQuestion(root,it,i+1));$('back').textContent=part===0?'説明へ戻る':'前へ';$('next').textContent=part===2?'結果を見る':'次へ';$('validation').textContent=''}
 function averages(){let out={};for(let p of PARTS){let a=ITEMS.filter(it=>it.factor===p.key).map(it=>answers[it.id]);out[p.key]=a.reduce((x,y)=>x+y,0)/a.length}return out}
