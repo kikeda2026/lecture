@@ -37,6 +37,7 @@ const blocks=[{title:'物体イメージ（VISQ）',from:0,to:12,desc:'次の文
 const VISQ_LABELS=['全くあてはまらない','あまりあてはまらない','どちらともいえない','ややあてはまる','よくあてはまる'];
 const VOIQ_LABELS=['実際のにおいと同じくらい鮮明','かなり鮮明','ある程度鮮明','ぼんやりしている','まったくイメージできない'];
 const ANSWERS=Array(38).fill(null);let page=0,done=false,nonce='',response=null,sending=false,requestId=null;
+let checkTimer=null,checkTimeout=null,checkNumber=0,checkInFlight=false;
 const configured=/^https:\/\/script\.google\.com\/macros\/s\/.+\/exec$/.test(GAS_URL);
 const $=id=>document.getElementById(id);
 function show(id){['intro','survey','result'].forEach(x=>$(x).classList.toggle('hide',x!==id));window.scrollTo({top:0,behavior:'instant'});}
@@ -60,13 +61,86 @@ function uuid(){return crypto.randomUUID?crypto.randomUUID():Array.from(crypto.g
 $('start').onclick=()=>{const age=Number($('age').value);if(!Number.isInteger(age)||age<15||age>100){error('intro-error','年齢を15〜100の整数で入力してください。');return;}if(!$('gender').value){error('intro-error','性別を選択してください。');return;}if(!$('consent').checked){error('intro-error','同意を確認してください。');return;}error('intro-error','');page=0;render();show('survey')};
 $('back').onclick=()=>{error('survey-error','');if(page===0){show('intro')}else{page--;render();window.scrollTo(0,0)}};
 $('next').onclick=()=>{const b=blocks[page];const first=ANSWERS.slice(b.from,b.to).findIndex(x=>x===null);if(first>=0){error('survey-error',`質問${b.from+first+1}に回答してください。`);const q=$('questions').children[first];q.scrollIntoView({behavior:'smooth',block:'center'});return;}error('survey-error','');if(page<2){page++;render();window.scrollTo(0,0)}else submit()};
-function submit(){if(sending)return;sending=true;$('next').disabled=true;$('next').textContent='送信中…';response={score:calc(ANSWERS),stats:BASELINE};
- if(!configured){renderResult(false);return;}
- nonce=uuid();if(!requestId)requestId=uuid();const payload={id:requestId,nonce,age:Number($('age').value),gender:$('gender').value,consent:true,honeypot:'',answers:ANSWERS};
- $('postform').action=GAS_URL;$('payload').value=JSON.stringify(payload);$('postform').submit();
- $('survey-error').textContent='保存先からの応答を確認しています。送信を繰り返さないでください。';
+// Google Apps Script のiframe通知が届かない場合に備え，JSONPによる保存確認も行う。
+// requestId は同一回答で再利用するため，通信失敗後に再送してもGAS側で重複登録されない。
+function stopChecking(){
+ if(checkTimer){clearInterval(checkTimer);checkTimer=null;}
+ if(checkTimeout){clearTimeout(checkTimeout);checkTimeout=null;}
+ checkInFlight=false;
 }
-window.addEventListener('message',evt=>{if(!configured || !sending)return;const data=evt.data;if(!data||data.kind!=='imagery_result'||data.nonce!==nonce)return;if(data.ok){response={score:data.score,stats:data.stats};renderResult(true)}else{sending=false;$('next').disabled=false;$('next').textContent='回答を送信して結果を見る';error('survey-error','保存できませんでした：'+(data.error||'不明なエラー'))}});
+function showSaved(data){
+ if(!sending)return;
+ stopChecking();sending=false;
+ response={score:data.score||calc(ANSWERS),stats:data.stats};
+ renderResult(true);
+}
+function showSendError(message){
+ stopChecking();sending=false;
+ $('next').disabled=false;
+ $('next').textContent='保存状況を確認して再送する';
+ error('survey-error',message+'  同じ回答IDを使用するため，保存済みの場合も重複登録されません。');
+}
+function checkSaved(){
+ if(!sending||checkInFlight)return;
+ checkInFlight=true;
+ const cb='imageryStatus'+Date.now()+Math.floor(Math.random()*100000);
+ const tag=document.createElement('script');
+ const clear=()=>{checkInFlight=false;delete window[cb];tag.remove();};
+ const timer=setTimeout(clear,6500);
+ window[cb]=(data)=>{
+   clearTimeout(timer);clear();
+   if(!sending)return;
+   if(data&&data.ok&&data.found){showSaved(data);return;}
+   if(data&&!data.ok){$('survey-error').textContent='保存状況を再確認しています：'+String(data.error||'通信中');}
+ };
+ tag.onerror=()=>{clearTimeout(timer);clear()};
+ tag.src=GAS_URL+'?action=status&id='+encodeURIComponent(requestId)+'&callback='+encodeURIComponent(cb)+'&t='+Date.now();
+ document.head.append(tag);
+}
+function submit(){
+ if(sending)return;
+ sending=true;
+ $('next').disabled=true;
+ $('next').textContent='送信中…';
+ response={score:calc(ANSWERS),stats:BASELINE};
+ if(!configured){renderResult(false);sending=false;return;}
+ // 同一回答の再試行時は新しいIDを生成しない。
+ nonce=uuid();if(!requestId)requestId=uuid();
+ const payload={id:requestId,nonce,age:Number($('age').value),gender:$('gender').value,consent:true,honeypot:'',answers:ANSWERS};
+ $('postform').action=GAS_URL;
+ $('payload').value=JSON.stringify(payload);
+ $('survey-error').textContent='回答を送信しています。保存状況を自動確認します。';
+ // 再送前にまず既存の保存状況を確認。初回は送信してから照会する。
+ if(checkNumber>0){
+   checkSaved();
+   setTimeout(()=>{if(sending&&!done)sendForm(payload)},2500);
+ }else sendForm(payload);
+ checkNumber++;
+}
+function sendForm(payload){
+ if(!sending||done)return;
+ $('payload').value=JSON.stringify(payload);
+ try{$('postform').submit()}catch(err){showSendError('送信を開始できませんでした：'+err.message);return;}
+ checkTimer=setInterval(checkSaved,3000);
+ checkTimeout=setTimeout(()=>{
+   if(sending)showSendError('保存の確認ができませんでした。通信環境やGASのデプロイ設定を確認してください。');
+ },45000);
+ setTimeout(checkSaved,1800);
+}
+window.addEventListener('message',evt=>{
+ if(!configured||!sending)return;
+ // 異なるサイトからの偽通知を拒否。GASの返答はgoogle.com/googleusercontent.comから来る。
+ try{const origin=new URL(evt.origin).hostname;
+   if(!(origin==='script.google.com'||origin==='script.googleusercontent.com'||origin.endsWith('.googleusercontent.com')))return;
+ }catch(_){return;}
+ const data=evt.data;
+ if(!data||data.kind!=='imagery_result'||data.nonce!==nonce)return;
+ if(data.ok){showSaved(data)}else{
+   // GAS側でエラーの場合も，先に保存されていないか確認してから再試行可能にする。
+   checkSaved();
+   showSendError('送信先からエラーが返されました：'+(data.error||'不明なエラー'));
+ }
+});
 function renderResult(saved){done=saved;const {score,stats}=response;show('result');$('save-state').textContent=saved?'回答はGoogleスプレッドシートに保存されました。以下は保存直後の最新集計です。':'デモ結果です。GAS未設定のため回答は保存されていません。下記の平均値は過去94名のみの値です。';$('sample-count').textContent=`比較対象：${stats.n}名　／　個人結果と全体平均（各尺度の項目平均：1〜5点）`;$('stats').replaceChildren();
  const scales=[['物体イメージ','object_mean','object_total',12,'高いほど物体イメージを使う傾向'],['空間イメージ','spatial_mean','spatial_total',12,'高いほど空間イメージを使う傾向'],['嗅覚イメージ','odor_mean','odor_total',14,'低いほどにおいを鮮明に想像する傾向']];
  for(const [name,key,total,n,desc] of scales){const box=document.createElement('div');box.className='stat';const yours=score[key],group=stats.mean[key];const title=document.createElement('div');title.className='stat-title';title.textContent=name;const numbers=document.createElement('div');numbers.className='stat-numbers';numbers.textContent=`あなた ${yours.toFixed(2)}　｜　全体平均 ${group===null?'集計なし':group.toFixed(2)}`;const bar=document.createElement('div');bar.className='barbg';const a=document.createElement('span');a.className='bar-person';a.style.width=(yours/5*100)+'%';const g=document.createElement('span');g.className='bar-group';g.style.width=(group/5*100)+'%';bar.append(a,g);const explain=document.createElement('div');explain.className='two';explain.textContent=`${desc}　｜　原著式合計 ${score[total]} / ${n*5} 点`;box.append(title,numbers,bar,explain);$('stats').append(box)}
