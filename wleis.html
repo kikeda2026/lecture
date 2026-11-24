@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>J-WLEIS | 知覚・認知心理学</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&amp;family=Noto+Serif+JP:wght@400;700&amp;family=DM+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #1A2340; --navy-mid: #243055; --green: #2EAA6E;
+  --green-light: #EBF7F2; --green-dim: #1E7A4E; --amber: #E8973A;
+  --gray: #8A94A6; --gray-light: #F4F6FA; --border: #E2E8F0;
+  --white: #FFFFFF; --text: #1A2340; --mono: 'DM Mono', monospace;
+  --muted: #596579;
+}
+html { scroll-behavior: smooth; }
+body { font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', Meiryo, sans-serif; color: var(--text); background: var(--gray-light); line-height: 1.8; min-height: 100vh; display: flex; flex-direction: column; }
+nav { background: var(--navy); display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0 5%; height: 56px; position: sticky; top: 0; z-index: 100; }
+.nav-logo { color: var(--white); font-family: 'Noto Serif JP', serif; font-size: .85rem; letter-spacing: .05em; }
+.nav-tag { background: rgba(46,170,110,.2); color: #70D6A4; font: .72rem var(--mono); letter-spacing: .08em; padding: .25rem .7rem; border: 1px solid rgba(46,170,110,.35); border-radius: 2px; white-space: nowrap; }
+.page-header { background: var(--navy); padding: 48px 5% 40px; position: relative; overflow: hidden; }
+.page-header::after { content: 'J-WLEIS'; position: absolute; right: 4%; top: 50%; transform: translateY(-50%); font: 500 clamp(4rem,10vw,8rem) var(--mono); color: rgba(255,255,255,.04); letter-spacing: -.02em; pointer-events: none; user-select: none; }
+.header-eyebrow { font: .72rem var(--mono); color: #70D6A4; letter-spacing: .18em; text-transform: uppercase; margin-bottom: .7rem; }
+.header-title { font-family: 'Noto Serif JP', serif; font-size: clamp(1.4rem,3vw,2rem); color: var(--white); line-height: 1.5; margin-bottom: .8rem; }
+.header-sub { color: rgba(255,255,255,.72); font-size: .85rem; max-width: 560px; line-height: 1.9; }
+main { width: 100%; max-width: 760px; margin: 0 auto; padding: 36px 5% 80px; flex: 1; }
+#app { background: var(--white); border: 1.5px solid var(--border); border-radius: 3px; padding: clamp(1.1rem,3.8vw,2rem); }
+h1,h2 { font-family: 'Noto Serif JP', serif; line-height: 1.65; margin: 0 0 1rem; }
+h1 { font-size: clamp(1.3rem,3.5vw,1.7rem); } h2 { font-size: clamp(1.12rem,2.8vw,1.35rem); }
+p { margin: 0 0 1rem; } small,.muted { color: var(--muted); font-size: .83rem; }
+.eyebrow { font-family: var(--mono); font-size: .72rem; letter-spacing: .14em; color: var(--green-dim); font-weight: 500; margin-bottom: .8rem; }
+.panel { border: 1.5px solid var(--border); background: var(--gray-light); border-radius: 3px; padding: 1.2rem 1.3rem; margin: 1rem 0; }
+.panel > :last-child { margin-bottom: 0; }
+.progress { height: 7px; background: var(--border); border-radius: 2px; overflow: hidden; margin: .5rem 0 1.6rem; }
+.progress div { height: 100%; background: var(--green); transition: width .2s; }
+.choices { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: .75rem; margin: 1.2rem 0; }
+button { font: 500 .9rem 'Noto Sans JP',sans-serif; color: var(--navy); background: var(--white); border: 1.5px solid var(--border); border-radius: 3px; cursor: pointer; padding: .65rem 1.2rem; min-height: 48px; transition: background .2s,border-color .2s,box-shadow .2s,transform .15s; }
+button:hover:not(:disabled) { border-color: var(--green); box-shadow: 0 3px 12px rgba(46,170,110,.12); }
+button:focus-visible,input:focus-visible,select:focus-visible { outline: 3px solid var(--green); outline-offset: 3px; }
+button.primary { background: var(--green-dim); border-color: var(--green-dim); color: var(--white); font-weight: 700; letter-spacing: .04em; }
+button.primary:hover:not(:disabled) { background: #17643F; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.choice { display: flex; align-items: center; gap: .85rem; text-align: left; padding: .8rem 1rem; line-height: 1.55; position: relative; border-left: 5px solid var(--border); }
+.choice strong { font: 500 1.3rem var(--mono); min-width: 24px; text-align: center; }
+.choice[aria-pressed=true] { background: var(--green-light); border-color: var(--green); border-left-color: var(--green-dim); color: var(--green-dim); box-shadow: 0 0 0 1px var(--green); font-weight: 700; }
+.nav { display: flex; justify-content: space-between; gap: .75rem; margin-top: 1.5rem; }
+.consent { display: flex; gap: .65rem; align-items: flex-start; cursor: pointer; font-size: .9rem; }
+.consent input { width: 20px; height: 20px; flex: none; margin-top: 5px; accent-color: var(--green-dim); }
+.demographics { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+.field-label { display: block; font-size: .9rem; font-weight: 700; margin-bottom: .35rem; }
+.field-input { display: block; width: 100%; min-height: 48px; border: 1.5px solid var(--border); border-radius: 3px; background: var(--white); padding: .55rem .75rem; font: inherit; color: var(--navy); }
+.field-input:focus { border-color: var(--green); }
+#start-error { color: #9C3C2D; font-size: .83rem; margin: .75rem 0; }
+@media(max-width:600px) { .demographics { grid-template-columns: 1fr; } }
+.legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 1.2rem; font-size: .83rem; }
+.legend span::before { content: ''; display: inline-block; width: 22px; vertical-align: middle; margin-right: 6px; border-top: 3px solid var(--navy-mid); }
+.legend span.ref::before { border-top: 3px dashed var(--green-dim); }
+svg { display: block; width: 100%; max-width: 620px; margin: 0 auto; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; margin: .9rem 0; }
+th,td { padding: .55rem .6rem; border-bottom: 1px solid var(--border); text-align: right; font-variant-numeric: tabular-nums; }
+th:first-child,td:first-child { text-align: left; } thead th { background: var(--gray-light); color: var(--navy); font-size: .78rem; border-bottom: 2px solid var(--border); } tbody th { font-weight: 500; } td { font-family: var(--mono); }
+#status { white-space: pre-wrap; margin: 0; } #status[data-state=error] { color: #9C3C2D; } #status[data-state=ok] { color: var(--green-dim); font-weight: 700; }
+#status + button:not([hidden]) { margin-top: .8rem; } a { color: var(--green-dim); } a:hover { text-decoration: underline; }
+footer { background: #111827; padding: 1.2rem 5%; text-align: center; } footer p { font-size: .75rem; color: rgba(255,255,255,.65); margin: 0; }
+@media(max-width:600px) { .page-header { padding: 30px 5% 27px; } main { padding: 22px 5% 48px; } .choices { grid-template-columns: 1fr; gap: .55rem; } .choice { padding: .6rem .8rem; } table { font-size: .76rem; } th,td { padding: .45rem .25rem; } .legend { gap: .6rem; } .panel { padding: 1rem; } }
+@media(prefers-reduced-motion:reduce) { html { scroll-behavior: auto; } * { transition: none !important; animation: none !important; } }
+</style></head><body>
+<nav aria-label="講義情報"><span class="nav-logo">知覚・認知心理学</span><span class="nav-tag">CHAPTER 11</span></nav>
+<header class="page-header"><div class="header-eyebrow">PRACTICE / J-WLEIS</div><div class="header-title">情動知能の個人差</div><p class="header-sub">認知の個人差を学ぶ実習｜日本版WLEIS（豊田・山本，2011）</p></header>
+<main><section id="app" aria-label="J-WLEIS実習"></section></main>
+<footer><p>知覚・認知心理学｜第11章 認知の個人差</p></footer>
+<script>
+'use strict';
+// 豊田・山本（2011）p.9 Table 1、項目番号順。Web公開前に転載条件をご確認ください。
+const VERSION='J-WLEIS_Toyota-Yamamoto_2011_v2';
+// GAS web app URL (ending in /exec). Set after deploying Code_wleis_github.gs.
+const GAS_URL='https://script.google.com/macros/s/AKfycbzR60KIeTe6l_oiOKzFyZtPGFeD3LsY3h1IKhpH4NkNTTtM0HLn8VKfimLMWOeU1t3EEQ/exec';
+const ITEMS=[
+'私は、たいていの場合何故自分がそんな気持ちになるのかがわかる。',
+'私は、自分の気持ちを良く理解できている。',
+'私は、自分の感じていることがよく分かっている。',
+'私は、いつも自分の気分がよいかどうか分かっている。',
+'私は、友人の行動をみれば、その友人の気持ちがわかる。',
+'私は、他人を観察して、その人の気持ちをわかろうとしている。',
+'私は、他人の気持ちや感情に対して敏感である。',
+'私は、周りの人たちの気持ちを良く理解している。',
+'私は、いつも自分の目標を立て、それを達成するために全力を尽くす。',
+'私は、いつも自分が有能な人間であると自分に言い聞かせている。',
+'私は、自分でやる気を高めようとする人間である。',
+'私は、いつも自分を励まして、全力で尽くせるようにしている。',
+'私は、自分の感情の高まりをおさえられるので、難しい課題であってもそれらをうまく処理できている。',
+'私は、自分の気持ちをコントロールするのがとても得意である。',
+'私は、腹が立ったときでもすぐに落ち着きを取り戻すことができる。',
+'私は、自分の気持ちをうまくコントロールできている。'];
+// 原著 p.8 の評定ラベル（1〜7）。
+const LABELS=['全くあてはまらない','ほとんどあてはまらない','あまりあてはまらない','どちらともいえない','少しあてはまる','かなりあてはまる','非常にあてはまる'];
+const NAMES=['自己の情動評価','他者の情動評価','情動の利用','情動の調節'];
+const SHORT=['SEA','OEA','UOE','ROE'];
+const DESCRIPTIONS=['自分の感情を理解することについての自己評価。','他者の感情を読み取り，理解することについての自己評価。','自分を動機づけ，目標に向かって取り組むことについての自己評価。','自分の感情を調整することについての自己評価。'];
+const ITEM_MEANS=[5.38,5.23,5.46,5.78,4.88,5.33,5.56,4.44,4.44,3.35,4.75,4.53,3.94,3.90,4.26,4.29];
+function score(values){if(!Array.isArray(values)||values.length!==16||!values.every(v=>typeof v==='number'&&Number.isFinite(v)))throw Error('16項目が必要です');return Array.from({length:4},(_,i)=>values.slice(i*4,i*4+4).reduce((s,v)=>s+v,0)/4);}
+const REF=score(ITEM_MEANS); // 5.4625, 5.0525, 4.2675, 4.0975
+const app=document.getElementById('app'), answers=Array(16).fill(null);
+let index=0, consent=false, age='', sex='', busy=false, saved=false, requestToken=0;
+const SEX_OPTIONS=['男性','女性','その他','回答しない'];
+function randomHex(){return Array.from(globalThis.crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');}
+const responseId=globalThis.crypto?.randomUUID?.()||randomHex();
+function configured(){return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(GAS_URL);}
+function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+// JSONP checks only whether an unpredictable response ID has been recorded.
+// No item answers, demographics, or scores are ever returned.
+function checkSaved(id){return new Promise(resolve=>{
+  const callback='wleisAck_'+randomHex();
+  const script=document.createElement('script');
+  let finished=false,timer;
+  function finish(ok){if(finished)return;finished=true;clearTimeout(timer);script.remove();delete globalThis[callback];resolve(ok);}
+  globalThis[callback]=r=>finish(r?.ok===true&&r?.saved===true);
+  script.onerror=()=>finish(false);
+  const url=new URL(GAS_URL);url.searchParams.set('action','status');url.searchParams.set('rid',id);url.searchParams.set('callback',callback);
+  script.src=url.toString();timer=setTimeout(()=>finish(false),6000);document.head.append(script);
+});}
+async function postResponse(payload){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),10000);try{await fetch(GAS_URL,{method:'POST',mode:'no-cors',credentials:'omit',redirect:'follow',body:new URLSearchParams({payload:JSON.stringify(payload)}),signal:controller.signal});}catch(e){/* A blocked/aborted response does not prove the write failed. Check status. */}finally{clearTimeout(timer);}}
+function el(tag,text,parent=app){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;parent.append(n);return n;}
+function btn(text,fn,parent=app,primary=false){const b=el('button',text,parent);b.type='button';b.addEventListener('click',fn);if(primary)b.className='primary';return b;}
+function clear(){app.replaceChildren();window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;try{window.parent!==window&&window.parent.scrollTo(0,0)}catch(e){}}
+function heading(text){el('div','知覚・認知心理学｜第11章 認知の個人差').className='eyebrow';return el('h1',text);}
+function source(parent=app){const p=el('p','出典：豊田弘司・山本晃輔（2011）日本版WLEIS（Wong and Law Emotional Intelligence Scale）の作成．教育実践総合センター研究紀要，20，7–12．',parent);p.className='muted';const a=el('a','原著論文',p);a.href='https://nara-edu.repo.nii.ac.jp/records/9680';a.target='_blank';a.rel='noopener noreferrer';}
+function start(){
+  clear();heading('情動知能のプロフィール');
+  el('p','自分自身や他者の感情への対応について，普段の自分にどの程度あてはまるかを回答してください。正解・不正解はありません。');
+  el('p','全16項目・約3〜5分。最後に4つの領域の自己評価を，先行研究の大学生の平均と比較できます。');
+  const panel=el('div');panel.className='panel';
+  el('p','この実習は教育目的であり，知能検査や診断ではありません。氏名・学籍番号は収集しません。回答終了後，匿名回答ID，回答日時，年齢，性別，各項目の回答，得点を担当教員のスプレッドシートに自動で記録します。内容を確認し，データの保存に同意してから開始してください。',panel);
+  const form=el('div',undefined,panel);form.className='demographics';
+  const ageField=el('div',undefined,form);const al=el('label','年齢（歳）',ageField);al.className='field-label';al.htmlFor='age';
+  const ai=el('input',undefined,ageField);ai.id='age';ai.className='field-input';ai.type='number';ai.min='1';ai.max='120';ai.step='1';ai.inputMode='numeric';ai.placeholder='例：18';ai.required=true;ai.value=age;ai.addEventListener('input',()=>{age=ai.value;update();});
+  const sexField=el('div',undefined,form);const sl=el('label','性別',sexField);sl.className='field-label';sl.htmlFor='sex';
+  const si=el('select',undefined,sexField);si.id='sex';si.className='field-input';si.required=true;
+  const placeholder=el('option','選択してください',si);placeholder.value='';placeholder.disabled=true;
+  SEX_OPTIONS.forEach(t=>{const o=el('option',t,si);o.value=t;});si.value=sex;si.addEventListener('change',()=>{sex=si.value;update();});
+  const label=el('label',undefined,panel);label.className='consent';const c=el('input',undefined,label);c.type='checkbox';c.checked=consent;c.onchange=()=>{consent=c.checked;update();};el('span','回答データの保存に同意する',label);
+  const hint=el('p','年齢・性別を入力し，保存に同意すると開始できます。',panel);hint.className='muted';
+  function valid(){return ai.value!==''&&ai.validity.valid&&Number.isInteger(Number(age))&&Number(age)>=1&&Number(age)<=120&&SEX_OPTIONS.includes(sex)&&consent;}
+  const startButton=btn('実習を開始する',()=>{if(valid())question();},app,true);
+  function update(){startButton.disabled=!valid();}update();source();
+}
+function question(){clear();el('div',`QUESTION ${index+1} / 16`).className='eyebrow';const bar=el('div');bar.className='progress';bar.setAttribute('role','progressbar');bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax','16');bar.setAttribute('aria-valuenow',String(index+1));el('div',undefined,bar).style.width=`${(index+1)/16*100}%`;el('h2',ITEMS[index]);el('p','最もあてはまる選択肢を1つ選んでください。').className='muted';const group=el('div');group.className='choices';group.setAttribute('role','group');group.setAttribute('aria-label','7段階評定');let next;LABELS.forEach((label,i)=>{const b=btn('',()=>{answers[index]=i+1;Array.from(group.children).forEach((x,j)=>x.setAttribute('aria-pressed',String(j===i)));next.disabled=false;},group);b.className='choice';el('strong',String(i+1),b);el('span',label,b);b.setAttribute('aria-pressed',String(answers[index]===i+1));});const nav=el('div');nav.className='nav';btn('戻る',()=>{if(index===0)start();else{index--;question();}},nav);next=btn(index===15?'回答を終了する':'次へ',()=>{if(answers[index]===null)return;if(index===15){if(answers.every(v=>Number.isInteger(v)&&v>=1&&v<=7))result();}else{index++;question();}},nav,true);next.disabled=answers[index]===null;}
+function chart(values){const ns='http://www.w3.org/2000/svg';const svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 560 390');svg.setAttribute('role','img');svg.setAttribute('aria-label','4尺度のレーダーチャート。ネイビーの実線が自己評価，緑破線が先行研究平均。数値は後の表にも記載。');app.append(svg);const cx=280,cy=194,R=119;function node(tag,attrs,text){const n=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;svg.append(n);return n;}function point(v,i){const a=i*Math.PI/2-Math.PI/2,r=(v-1)/6*R;return [cx+r*Math.cos(a),cy+r*Math.sin(a)];}function poly(arr){return arr.map(point).map(p=>p.join(',')).join(' ');}for(let n=2;n<=7;n++){node('polygon',{points:poly([n,n,n,n]),fill:'none',stroke:'#E2E8F0','stroke-width':1});node('text',{x:cx+5,y:cy-(n-1)*R/6+3,'font-size':11,fill:'#596579'},String(n));}node('text',{x:cx+5,y:cy+4,'font-size':11,fill:'#596579'},'1');NAMES.forEach((s,i)=>{const p=point(7,i);node('line',{x1:cx,y1:cy,x2:p[0],y2:p[1],stroke:'#8A94A6'});const xy=[[280,28],[468,178],[280,349],[92,178]][i];const parts=i===1?['他者の','情動評価']:i===3?['情動の','調節']:[s];parts.forEach((t,j)=>node('text',{x:xy[0],y:xy[1]+j*21,'text-anchor':'middle','font-size':17,'font-weight':'bold',fill:'#1A2340'},t));node('text',{x:xy[0],y:xy[1]+parts.length*21+4,'text-anchor':'middle','font-size':16,fill:'#243055','font-weight':'bold'},values[i].toFixed(2));});node('polygon',{points:poly(REF),fill:'#1E7A4E','fill-opacity':.06,stroke:'#1E7A4E','stroke-width':2.8,'stroke-dasharray':'7 5'});node('polygon',{points:poly(values),fill:'#243055','fill-opacity':.18,stroke:'#243055','stroke-width':3});values.forEach((v,i)=>{const p=point(v,i);node('circle',{cx:p[0],cy:p[1],r:4.8,fill:'#243055',stroke:'white','stroke-width':1});});}
+function result(){clear();heading('あなたの情動知能プロフィール');el('p','4つの領域について，自分の回答と先行研究の平均を比較します。');const scores=score(answers);const legend=el('div');legend.className='legend';el('span','あなたの得点',legend);el('span','先行研究の平均',legend).className='ref';chart(scores);const table=el('table');const head=el('thead',undefined,table),hr=el('tr',undefined,head);['下位尺度','あなた','研究平均','差'].forEach(t=>{el('th',t,hr).scope='col';});const body=el('tbody',undefined,table);NAMES.forEach((n,i)=>{const tr=el('tr',undefined,body);el('th',n,tr).scope='row';const d=scores[i]-REF[i];[scores[i].toFixed(2),REF[i].toFixed(2),(d>=0?'+':'')+d.toFixed(2)].forEach(t=>el('td',t,tr));});el('p','全16項目の平均：'+(answers.reduce((a,b)=>a+b,0)/16).toFixed(2)+' / 7').className='muted';el('p','比較対象：豊田・山本（2011），大学生321名，平均年齢19歳2か月。研究平均はTable 1の丸められた項目平均を各4項目で平均した近似値です。差は丸め前の比較値を使って算出しています。全国標準値ではなく，偏差値・順位・診断を意味しません。').className='muted';const box=el('div');box.className='panel';el('h2','結果の読み方',box);NAMES.forEach((n,i)=>{const p=el('p',undefined,box);el('strong',n+'：',p);p.append(document.createTextNode(DESCRIPTIONS[i]));});el('p','得点は感情に関する自己認識を表し，実際の課題遂行能力を直接測定したものではありません。平均より高い／低いことは優劣を示すものではありません。',box);const savebox=el('div');savebox.className='panel';const intro=app.querySelector('h1');if(intro)intro.after(savebox);el('h2','回答データの保存',savebox);const status=el('p','',savebox);status.id='status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');{const retry=btn('保存を再試行',send,savebox,true);retry.hidden=true;function setStatus(t,state){status.textContent=t;status.dataset.state=state||'';}async function send(){
+  if(busy||saved)return;
+  if(!configured()){setStatus('保存先のGAS URLが未設定です。担当教員に連絡してください。','error');return;}
+  busy=true;retry.hidden=true;const token=++requestToken;
+  setStatus('回答を自動保存しています。保存完了の表示を確認してください。');
+  const payload={id:responseId,version:VERSION,answers:answers.slice(),consent:true,age:Number(age),sex:sex};
+  try{
+    await postResponse(payload);
+    for(let i=0;i<3;i++){
+      if(i>0)await delay(1500);
+      if(token!==requestToken)return;
+      if(await checkSaved(responseId)){
+        if(token!==requestToken)return;
+        saved=true;retry.hidden=true;setStatus('回答の保存が完了しました。','ok');return;
+      }
+    }
+    setStatus('保存完了を確認できませんでした。記録済みの場合もあります。同じ回答IDで再試行できますので，画面を閉じずに再試行してください。','error');retry.hidden=false;
+  }catch(e){setStatus('保存完了を確認できませんでした。画面を閉じずに再試行してください。','error');retry.hidden=false;}
+  finally{if(token===requestToken)busy=false;}
+}send();}source();const related=el('p','関連研究：Fukuda et al. (2011). Factor structure of Japanese versions of two emotional intelligence scales. International Journal of Testing, 11, 71–92. ');related.className='muted';const link=el('a','DOI',related);link.href='https://doi.org/10.1080/15305058.2010.516379';link.target='_blank';link.rel='noopener noreferrer';}
+start();
+</script></body></html>
