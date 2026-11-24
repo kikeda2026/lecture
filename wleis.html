@@ -89,7 +89,7 @@ main.questionnaire-main { max-width: 1100px; padding-left: 3%; padding-right: 3%
 <nav aria-label="講義情報"><span class="nav-logo">知覚・認知心理学</span><span class="nav-tag">CHAPTER 11</span></nav>
 <header class="page-header"><div class="header-eyebrow">PRACTICE / J-WLEIS</div><div class="header-title">情動知能の個人差</div><p class="header-sub">認知の個人差を学ぶ実習｜日本版WLEIS（豊田・山本，2011）</p></header>
 <main><section id="app" aria-label="J-WLEIS実習"></section></main>
-<footer><p>知覚・認知心理学｜第11章 認知の個人差</p></footer>
+<footer><p>知覚・認知心理学｜第11章 認知の個人差｜通信確認改訂版</p></footer>
 <script>
 'use strict';
 // 豊田・山本（2011）p.9 Table 1、項目番号順。Web公開前に転載条件をご確認ください。
@@ -128,19 +128,53 @@ function randomHex(){return Array.from(globalThis.crypto.getRandomValues(new Uin
 const responseId=globalThis.crypto?.randomUUID?.()||randomHex();
 function configured(){return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(GAS_URL);}
 function delay(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
-// JSONP checks only whether an unpredictable response ID has been recorded.
-// No item answers, demographics, or scores are ever returned.
-function checkSaved(id){return new Promise(resolve=>{
+// Verify a server acknowledgement, never infer a successful write from an opaque response.
+function statusURL(id,callback){const url=new URL(GAS_URL);url.searchParams.set('action','status');url.searchParams.set('rid',id);url.searchParams.set('callback',callback);return url.toString();}
+async function checkSavedFetch(id){
+  const callback='wleisAck_'+randomHex();
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);
+  try{
+    const r=await fetch(statusURL(id,callback),{method:'GET',mode:'cors',credentials:'omit',redirect:'follow',signal:controller.signal});
+    if(!r.ok)return false;
+    const text=(await r.text()).trim();
+    // GAS already returns a JSONP wrapper. Parse its JSON without executing JavaScript.
+    const prefix=callback+'(';
+    if(!text.startsWith(prefix)||!text.endsWith(');'))return false;
+    const data=JSON.parse(text.slice(prefix.length,-2));
+    return data?.ok===true&&data?.saved===true;
+  }catch(e){return false;}finally{clearTimeout(timer);}
+}
+function checkSavedJSONP(id){return new Promise(resolve=>{
   const callback='wleisAck_'+randomHex();
   const script=document.createElement('script');
   let finished=false,timer;
   function finish(ok){if(finished)return;finished=true;clearTimeout(timer);script.remove();delete globalThis[callback];resolve(ok);}
   globalThis[callback]=r=>finish(r?.ok===true&&r?.saved===true);
   script.onerror=()=>finish(false);
-  const url=new URL(GAS_URL);url.searchParams.set('action','status');url.searchParams.set('rid',id);url.searchParams.set('callback',callback);
-  script.src=url.toString();timer=setTimeout(()=>finish(false),6000);document.head.append(script);
+  script.src=statusURL(id,callback);timer=setTimeout(()=>finish(false),6000);document.head.append(script);
 });}
-async function postResponse(payload){const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),10000);try{await fetch(GAS_URL,{method:'POST',mode:'no-cors',credentials:'omit',redirect:'follow',body:new URLSearchParams({payload:JSON.stringify(payload)}),signal:controller.signal});}catch(e){/* A blocked/aborted response does not prove the write failed. Check status. */}finally{clearTimeout(timer);}}
+async function checkSaved(id){
+  // Prefer an ordinary fetch; use the previous JSONP method if fetch is restricted.
+  if(await checkSavedFetch(id))return true;
+  return checkSavedJSONP(id);
+}
+async function postResponse(payload){
+  // The same ID and immutable payload are reused for every transport and retry.
+  for(const mode of ['cors','no-cors']){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+    try{
+      const r=await fetch(GAS_URL,{method:'POST',mode,credentials:'omit',redirect:'follow',body:new URLSearchParams({payload:JSON.stringify(payload)}),signal:controller.signal});
+      if(mode==='cors'&&r.ok){
+        const ack=await r.json();
+        if(ack?.ok===true&&typeof ack.duplicate==='boolean')return true;
+        // An explicit response was received: consult the status API rather than resending immediately.
+        if(ack?.ok===false)return false;
+      }
+    }catch(e){/* The write may already have completed. Server-side ID deduplication protects a retry. */}
+    finally{clearTimeout(timer);}
+  }
+  return false;
+}
 function el(tag,text,parent=app){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;parent.append(n);return n;}
 function btn(text,fn,parent=app,primary=false){const b=el('button',text,parent);b.type='button';b.addEventListener('click',fn);if(primary)b.className='primary';return b;}
 function clear(){app.classList.remove('questionnaire');app.parentElement.classList.remove('questionnaire-main');app.replaceChildren();window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0;try{window.parent!==window&&window.parent.scrollTo(0,0)}catch(e){}}
@@ -213,8 +247,12 @@ function result(){clear();heading('あなたの情動知能プロフィール');
   setStatus('回答を自動保存しています。保存完了の表示を確認してください。');
   const payload={id:responseId,version:VERSION,answers:answers.slice(),consent:true,age:Number(age),sex:sex};
   try{
-    await postResponse(payload);
-    for(let i=0;i<3;i++){
+    if(await postResponse(payload)){
+      if(token!==requestToken)return;
+      saved=true;retry.hidden=true;setStatus('回答の保存が完了しました。','ok');return;
+    }
+    setStatus('保存先への送信後，回答IDの記録を確認しています。');
+    for(let i=0;i<2;i++){
       if(i>0)await delay(1500);
       if(token!==requestToken)return;
       if(await checkSaved(responseId)){
@@ -222,7 +260,7 @@ function result(){clear();heading('あなたの情動知能プロフィール');
         saved=true;retry.hidden=true;setStatus('回答の保存が完了しました。','ok');return;
       }
     }
-    setStatus('保存完了を確認できませんでした。記録済みの場合もあります。同じ回答IDで再試行できますので，画面を閉じずに再試行してください。','error');retry.hidden=false;
+    setStatus('保存先から完了の応答を取得できませんでした。記録済みの場合もあります。同じ回答IDで再試行できます。改善しない場合は，画面を閉じる前に担当教員に確認してください。','error');retry.hidden=false;
   }catch(e){setStatus('保存完了を確認できませんでした。画面を閉じずに再試行してください。','error');retry.hidden=false;}
   finally{if(token===requestToken)busy=false;}
 }send();}source();const related=el('p','関連研究：Fukuda et al. (2011). Factor structure of Japanese versions of two emotional intelligence scales. International Journal of Testing, 11, 71–92. ');related.className='muted';const link=el('a','DOI',related);link.href='https://doi.org/10.1080/15305058.2010.516379';link.target='_blank';link.rel='noopener noreferrer';}
